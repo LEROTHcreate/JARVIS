@@ -339,49 +339,49 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
 }
 
 /**
- * Anneau orbital composé de N arcs courbés (torusGeometry partielle) avec
- * espaces vides entre eux. Le tube est rond, donc l'anneau est lisse et
- * brillant, beaucoup plus "JARVIS" que des box plates.
- *
- * - segments : nombre d'arcs autour du cercle (gardez bas pour des arcs
- *   longs, montez pour un effet plus pointillé)
- * - fillRatio : 0..1, proportion remplie de chaque cellule angulaire
- * - tube : épaisseur du tube (rayon de section)
- *
- * Astuce : appeler avec segments=1, fillRatio=1, tube fin → anneau continu
- * fin (utile pour un trail/glow superposé à l'anneau principal).
+ * Anneau pointillé : N petits segments répartis sur un cercle.
  */
-function CurvedRing({
+function DashedRing({
   radius,
   segments,
-  fillRatio,
-  tube,
   color,
   opacity,
 }: {
   radius: number;
   segments: number;
-  fillRatio: number;
-  tube: number;
   color: string;
   opacity: number;
 }) {
-  const arcLength = (Math.PI * 2) / segments;
-  const fillLength = arcLength * fillRatio;
+  const dashes = useMemo(() => {
+    const out: { angle: number }[] = [];
+    for (let i = 0; i < segments; i++) {
+      if (i % 2 === 0) out.push({ angle: (i / segments) * Math.PI * 2 });
+    }
+    return out;
+  }, [segments]);
+
   return (
     <>
-      {Array.from({ length: segments }).map((_, i) => (
-        <mesh key={i} rotation={[0, 0, i * arcLength]}>
-          <torusGeometry args={[radius, tube, 8, 24, fillLength]} />
-          <meshBasicMaterial
-            color={color}
-            transparent
-            opacity={opacity}
-            blending={AdditiveBlending}
-            depthWrite={false}
-          />
-        </mesh>
-      ))}
+      {dashes.map((d, i) => {
+        const x = Math.cos(d.angle) * radius;
+        const z = Math.sin(d.angle) * radius;
+        return (
+          <mesh
+            key={i}
+            position={[x, 0, z]}
+            rotation={[0, -d.angle + Math.PI / 2, 0]}
+          >
+            <boxGeometry args={[0.05, 0.005, 0.008]} />
+            <meshBasicMaterial
+              color={color}
+              transparent
+              opacity={opacity}
+              blending={AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+        );
+      })}
     </>
   );
 }
