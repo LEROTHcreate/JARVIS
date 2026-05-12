@@ -1,0 +1,299 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   JARVIS — Styles globaux
+   ============================================ */
+
+@import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
+
+:root {
+  --jarvis-bg: #03060d;
+  --jarvis-surface: #070d1a;
+  --jarvis-panel: #0a1428;
+  --jarvis-border: #16243f;
+  --jarvis-cyan: #00d4ff;
+  --jarvis-cyan-soft: #67e8f9;
+  --jarvis-ice: #dbeafe;
+  --jarvis-white: #f0f9ff;
+  --jarvis-blue: #0a84ff;
+  --jarvis-electric: #3b82f6;
+  --jarvis-text: #e6f1ff;
+  --jarvis-muted: #7a90b8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--jarvis-bg);
+  color: var(--jarvis-text);
+  font-family: var(--font-body), ui-sans-serif, system-ui;
+  overflow: hidden; /* L'app gère son propre scroll */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* Sélection autorisée uniquement sur les champs de saisie (sinon impossible
+   d'éditer son texte). Pour rendre un autre élément copiable, ajouter la
+   classe `selectable` ou l'attribut data-selectable. */
+input,
+textarea,
+[contenteditable="true"],
+.selectable,
+[data-selectable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+}
+
+/* Curseur natif masqué sur les dispositifs avec souris fine — le composant
+   Crosshair prend le relais. Sur tactile / pointer coarse, on garde le natif. */
+@media (pointer: fine) {
+  html,
+  body,
+  *,
+  *::before,
+  *::after {
+    cursor: none !important;
+  }
+}
+
+/* Grille de fond façon HUD */
+.hud-grid {
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: -1px -1px;
+}
+
+/* Effet glass cyan */
+.glass-panel {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 20, 40, 0.55) 0%,
+    rgba(7, 13, 26, 0.85) 100%
+  );
+  border: 1px solid rgba(0, 212, 255, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 0 0 1px rgba(0, 212, 255, 0.05) inset,
+    0 0 24px -8px rgba(0, 212, 255, 0.2),
+    0 12px 40px -16px rgba(0, 212, 255, 0.3);
+}
+/* Reflet supérieur sur les glass-panels */
+.glass-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(103, 232, 249, 0.22) 0%,
+    transparent 6%
+  );
+  mix-blend-mode: screen;
+}
+
+/* Texte qui scintille (titre) */
+.glow-text {
+  text-shadow:
+    0 0 6px rgba(240, 249, 255, 0.9),
+    0 0 14px rgba(0, 212, 255, 0.8),
+    0 0 28px rgba(0, 212, 255, 0.5),
+    0 0 56px rgba(10, 132, 255, 0.35);
+}
+
+.glow-text-soft {
+  text-shadow:
+    0 0 8px rgba(0, 212, 255, 0.45),
+    0 0 18px rgba(0, 212, 255, 0.25);
+}
+
+/* Halo radial pour zones d'accent (autour de l'orbe par ex) */
+.aura-cyan {
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 212, 255, 0.18) 0%,
+    rgba(10, 132, 255, 0.08) 35%,
+    transparent 70%
+  );
+}
+
+/* Effet sweep scanline horizontal */
+.scanline-sweep {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 212, 255, 0.08) 50%,
+    transparent 100%
+  );
+  height: 2px;
+  filter: blur(1px);
+}
+
+/* Scanline qui balaie verticalement (style écran CRT/scanner) */
+.scanline {
+  position: absolute;
+  inset-inline: 0;
+  height: 100px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 212, 255, 0.04) 35%,
+    rgba(103, 232, 249, 0.12) 50%,
+    rgba(0, 212, 255, 0.04) 65%,
+    transparent 100%
+  );
+  pointer-events: none;
+  animation: scanline-sweep 8s linear infinite;
+}
+@keyframes scanline-sweep {
+  0% {
+    transform: translateY(-110%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh);
+    opacity: 0;
+  }
+}
+
+/* Overlay hologramme — fines lignes horizontales */
+.hologram-lines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 212, 255, 0.04) 0,
+    rgba(0, 212, 255, 0.04) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: screen;
+}
+
+/* Glitch épisodique sur tout l'écran */
+@keyframes glitch-rgb {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    filter: none;
+    opacity: 1;
+  }
+  20% {
+    transform: translate(-1px, 1px);
+    filter: hue-rotate(8deg) saturate(1.6) brightness(1.08);
+  }
+  40% {
+    transform: translate(2px, -1px);
+    filter: hue-rotate(-12deg) contrast(1.15);
+  }
+  60% {
+    transform: translate(-1px, 0);
+    filter: hue-rotate(6deg);
+  }
+  80% {
+    transform: translate(0, 1px);
+    filter: hue-rotate(-4deg);
+  }
+}
+.glitch-active {
+  animation: glitch-rgb 240ms steps(4, end) 1;
+}
+
+/* Vignettes flickering subtiles */
+.hologram-flicker {
+  animation: hologram-flicker 6s linear infinite;
+}
+@keyframes hologram-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.85;
+  }
+  94% {
+    opacity: 1;
+  }
+  96% {
+    opacity: 0.92;
+  }
+  97% {
+    opacity: 1;
+  }
+}
+
+/* Scrollbar cyan discrète */
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(103, 232, 249, 0.5) 0%,
+    rgba(0, 212, 255, 0.35) 100%
+  );
+  border-radius: 999px;
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
+}
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(103, 232, 249, 0.7) 0%,
+    rgba(0, 212, 255, 0.55) 100%
+  );
+}
+
+/* Pour leaflet sur fond sombre */
+.leaflet-container {
+  background: #03060d !important;
+}
+.leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.95)
+    saturate(1.1);
+}
+.leaflet-control-attribution {
+  background: rgba(3, 6, 13, 0.7) !important;
+  color: #7a90b8 !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a {
+  color: #00d4ff !important;
+}
+
+/* Animation typewriter du caret */
+.caret::after {
+  content: "▍";
+  margin-left: 2px;
+  animation: caret-blink 1s steps(1) infinite;
+  color: var(--jarvis-cyan);
+}
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
