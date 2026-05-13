@@ -97,7 +97,7 @@ const PURIFY_OPTIONS = {
   // confiance aux href fantaisistes (javascript:, data:…) — DOMPurify les
   // strippe par défaut.
   ALLOW_DATA_ATTR: false,
-} as const;
+};
 
 /**
  * Nettoie le contenu LLM avant rendu HTML :

@@ -7,6 +7,7 @@ import { ImageResponse } from "next/og";
 // Les iOS modernes (16+) liront aussi notre SVG plus détaillé déclaré
 // dans manifest.webmanifest — ce PNG est le fallback raster.
 
+export const runtime = "edge";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
