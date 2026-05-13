@@ -14,6 +14,8 @@ import type { JarvisState } from "@/types";
 interface Props {
   state: JarvisState;
   audioLevel?: number;
+  /** Si true, le réacteur passe en palette rouge sang (mode Ultron). */
+  ultronMode?: boolean;
 }
 
 const SHELL_COUNT = 1400;
@@ -21,8 +23,33 @@ const CORE_COUNT = 350;
 const HALO_COUNT = 220;
 const EXPAND_DURATION_MS = 1500;
 
-// Palette : 4 nuances de bleu pour donner de la profondeur
-const PALETTE = ["#0a84ff", "#1e40af", "#3b82f6", "#67e8f9"];
+// Palettes — 4 nuances pour donner de la profondeur (du plus foncé au plus clair).
+const PALETTE_JARVIS = ["#0a84ff", "#1e40af", "#3b82f6", "#67e8f9"];
+const PALETTE_ULTRON = ["#dc143c", "#8b0000", "#ff1f2e", "#ff6464"];
+
+// Couleurs uniques (halo, core, glow, anneaux, ambient).
+const COLORS_JARVIS = {
+  halo: "#3b82f6",
+  core: "#dbeafe",
+  glowInner: "#0a84ff",
+  glowOuter: "#3b82f6",
+  ringADash: "#3b82f6",
+  ringASoft: "#0a84ff",
+  ringBDash: "#0a84ff",
+  ringCDash: "#3b82f6",
+  ambient: "#3b82f6",
+};
+const COLORS_ULTRON = {
+  halo: "#ff1f2e",
+  core: "#ffd1d1",
+  glowInner: "#dc143c",
+  glowOuter: "#8b0000",
+  ringADash: "#ff1f2e",
+  ringASoft: "#dc143c",
+  ringBDash: "#dc143c",
+  ringCDash: "#ff1f2e",
+  ambient: "#ff1f2e",
+};
 
 /**
  * Sphère de particules JARVIS "particle orb" — version polish.
@@ -35,7 +62,9 @@ const PALETTE = ["#0a84ff", "#1e40af", "#3b82f6", "#67e8f9"];
  *  - 3 anneaux orbitaux pointillés à inclinaisons croisées
  *  - SATELLITES : 1 satellite lumineux par anneau qui glisse en orbite
  */
-function ParticleOrb({ state, audioLevel = 0 }: Props) {
+function ParticleOrb({ state, audioLevel = 0, ultronMode = false }: Props) {
+  const palette = ultronMode ? PALETTE_ULTRON : PALETTE_JARVIS;
+  const colors = ultronMode ? COLORS_ULTRON : COLORS_JARVIS;
   const tiltRef = useRef<Group>(null);
   const shellRef = useRef<Points>(null);
   const coreRef = useRef<Points>(null);
@@ -55,7 +84,12 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
 
   const isListening = state === "listening";
   const isThinking = state === "thinking";
-  const level = isListening ? Math.max(0.06, audioLevel) : 0;
+  const isSpeaking = state === "speaking";
+  // `level` pilote l'audio-réactivité (scale + boost couleur). Actif en
+  // listening (mic) ET en speaking (TTS) — JARVIS qui parle fait grossir
+  // la sphère à chaque syllabe.
+  const level =
+    isListening || isSpeaking ? Math.max(0.06, audioLevel) : 0;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -67,13 +101,14 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
     return () => window.removeEventListener("mousemove", onMove);
   }, []);
 
-  // Sphère principale : Fibonacci + jitter radial + couleurs variées
+  // Sphère principale : Fibonacci + jitter radial + couleurs variées.
+  // La palette dépend de `ultronMode` → recompute quand on toggle.
   const { shellPositions, shellColors, shellBaseRadii } = useMemo(() => {
     const positions = new Float32Array(SHELL_COUNT * 3);
-    const colors = new Float32Array(SHELL_COUNT * 3);
+    const vertexColors = new Float32Array(SHELL_COUNT * 3);
     const baseRadii = new Float32Array(SHELL_COUNT);
     const phi = Math.PI * (Math.sqrt(5) - 1);
-    const palette = PALETTE.map((c) => new Color(c));
+    const palettePool = palette.map((c) => new Color(c));
     for (let i = 0; i < SHELL_COUNT; i++) {
       const y = 1 - (i / (SHELL_COUNT - 1)) * 2;
       const r = Math.sqrt(1 - y * y);
@@ -83,26 +118,27 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
       positions[i * 3] = Math.cos(theta) * r * jitter;
       positions[i * 3 + 1] = y * jitter;
       positions[i * 3 + 2] = Math.sin(theta) * r * jitter;
-      // Distribution couleur biaisée vers le bleu Stark, accents cyan
+      // Distribution couleur biaisée vers la teinte 0 (la plus dense), accents
+      // sur la 3e/4e (la plus claire) — fonctionne pareil avec la palette Ultron.
       const rnd = Math.random();
       const c =
         rnd < 0.55
-          ? palette[0]
+          ? palettePool[0]
           : rnd < 0.78
-            ? palette[1]
+            ? palettePool[1]
             : rnd < 0.94
-              ? palette[2]
-              : palette[3];
-      colors[i * 3] = c.r;
-      colors[i * 3 + 1] = c.g;
-      colors[i * 3 + 2] = c.b;
+              ? palettePool[2]
+              : palettePool[3];
+      vertexColors[i * 3] = c.r;
+      vertexColors[i * 3 + 1] = c.g;
+      vertexColors[i * 3 + 2] = c.b;
     }
     return {
       shellPositions: positions,
-      shellColors: colors,
+      shellColors: vertexColors,
       shellBaseRadii: baseRadii,
     };
-  }, []);
+  }, [ultronMode]);
 
   // Cœur dense : ~350 particules concentrées (rayon 0..0.45) avec biais vers
   // le centre (cube root pour densité radiale plus forte au cœur)
@@ -146,7 +182,9 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
     const expand = 1 - Math.pow(1 - expandRaw, 3);
     const t = now / 1000;
 
-    // Parallax souris
+    // Parallax souris : UNIQUEMENT rotation (tilt 3D), pas de translation
+    // pour que la sphère et les anneaux restent toujours centrés à
+    // l'origine, peu importe la position de la souris.
     if (tiltRef.current) {
       const driftX = Math.sin(t * 0.25) * 0.025;
       const driftY = Math.cos(t * 0.22) * 0.03;
@@ -156,10 +194,6 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
         (targetX - tiltRef.current.rotation.x) * 0.08;
       tiltRef.current.rotation.y +=
         (targetY - tiltRef.current.rotation.y) * 0.08;
-      const tx = mouseRef.current.x * 0.05;
-      const ty = -mouseRef.current.y * 0.05;
-      tiltRef.current.position.x += (tx - tiltRef.current.position.x) * 0.07;
-      tiltRef.current.position.y += (ty - tiltRef.current.position.y) * 0.07;
     }
 
     // Sphère principale : rotation + respiration individuelle des particules
@@ -183,23 +217,32 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
       }
       posAttr.needsUpdate = true;
 
-      // Pulsation globale par état
+      // Pulsation globale par état — speaking/listening grossissent la
+      // sphère à chaque syllabe via `level` (signal audio)
       const pulse = isThinking
         ? 1 + Math.sin(t * 5) * 0.05
-        : isListening
-          ? 1 + level * 0.18
-          : 1 + Math.sin(t * 1.4) * 0.02;
+        : isSpeaking
+          ? 1 + level * 0.28
+          : isListening
+            ? 1 + level * 0.18
+            : 1 + Math.sin(t * 1.4) * 0.02;
       const target = pulse * expand;
       const cur = shellRef.current.scale.x;
-      shellRef.current.scale.setScalar(cur + (target - cur) * 0.18);
+      shellRef.current.scale.setScalar(cur + (target - cur) * 0.22);
 
       const mat = shellRef.current.material as PointsMaterial;
+      // Opacité boostée en speaking → plus dense visuellement, plus bleu
       const targetOpacity = isThinking
         ? 1
-        : isListening
-          ? 0.92 + level * 0.08
-          : 0.85;
+        : isSpeaking
+          ? Math.min(1, 0.95 + level * 0.15)
+          : isListening
+            ? 0.92 + level * 0.08
+            : 0.85;
       mat.opacity += (targetOpacity - mat.opacity) * 0.1;
+      // Boost taille des points en speaking pour effet "plus dense / plus bleu"
+      const targetSize = isSpeaking ? 0.032 + level * 0.018 : 0.032;
+      mat.size += (targetSize - mat.size) * 0.15;
     }
 
     // Cœur dense : pulse rapide (effet "battement")
@@ -249,7 +292,7 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
           />
         </bufferGeometry>
         <pointsMaterial
-          color="#3b82f6"
+          color={colors.halo}
           size={0.022}
           sizeAttenuation
           transparent
@@ -288,7 +331,7 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
           />
         </bufferGeometry>
         <pointsMaterial
-          color="#dbeafe"
+          color={colors.core}
           size={0.028}
           sizeAttenuation
           transparent
@@ -302,7 +345,7 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
       <mesh>
         <sphereGeometry args={[0.32, 24, 24]} />
         <meshBasicMaterial
-          color="#0a84ff"
+          color={colors.glowInner}
           transparent
           opacity={0.18}
           blending={AdditiveBlending}
@@ -312,7 +355,7 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
       <mesh>
         <sphereGeometry args={[0.5, 24, 24]} />
         <meshBasicMaterial
-          color="#3b82f6"
+          color={colors.glowOuter}
           transparent
           opacity={0.07}
           blending={AdditiveBlending}
@@ -320,21 +363,57 @@ function ParticleOrb({ state, audioLevel = 0 }: Props) {
         />
       </mesh>
 
-      {/* Anneau A — orbite équatoriale */}
+      {/* Anneau A — orbite équatoriale, dense */}
       <group ref={ringARef} rotation={[Math.PI / 2 - 0.1, 0, 0]}>
-        <DashedRing radius={1.25} segments={64} color="#3b82f6" opacity={0.9} />
+        <DashedRing radius={1.2} segments={72} color={colors.ringADash} opacity={0.95} />
+      </group>
+
+      {/* Anneau A' — léger trail continu fin par-dessus l'anneau A pour
+          renforcer le glow circulaire (anneau plein très transparent) */}
+      <group rotation={[Math.PI / 2 - 0.1, 0, 0]}>
+        <SoftRing radius={1.2} color={colors.ringASoft} opacity={0.18} tube={0.003} />
       </group>
 
       {/* Anneau B — orbite inclinée à ~60° */}
       <group ref={ringBRef} rotation={[Math.PI / 3, 0.4, 0]}>
-        <DashedRing radius={1.4} segments={72} color="#0a84ff" opacity={0.75} />
+        <DashedRing radius={1.35} segments={88} color={colors.ringBDash} opacity={0.8} />
       </group>
 
       {/* Anneau C — orbite presque polaire */}
       <group ref={ringCRef} rotation={[0.3, 1.1, 0]}>
-        <DashedRing radius={1.55} segments={80} color="#3b82f6" opacity={0.6} />
+        <DashedRing radius={1.5} segments={96} color={colors.ringCDash} opacity={0.65} />
       </group>
+
     </group>
+  );
+}
+
+/**
+ * Anneau continu fin (torus complet) — utilisé en superposition d'un
+ * DashedRing pour créer un glow circulaire qui relie les segments.
+ */
+function SoftRing({
+  radius,
+  tube,
+  color,
+  opacity,
+}: {
+  radius: number;
+  tube: number;
+  color: string;
+  opacity: number;
+}) {
+  return (
+    <mesh rotation={[Math.PI / 2, 0, 0]}>
+      <torusGeometry args={[radius, tube, 8, 64]} />
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={opacity}
+        blending={AdditiveBlending}
+        depthWrite={false}
+      />
+    </mesh>
   );
 }
 
@@ -387,15 +466,40 @@ function DashedRing({
 }
 
 export function ArcReactor3D(props: Props) {
+  const ambientColor = props.ultronMode
+    ? COLORS_ULTRON.ambient
+    : COLORS_JARVIS.ambient;
+
+  // Contre-filtre Ultron : on neutralise EXACTEMENT le filter du conteneur
+  // `.ultron-mode` (hue-rotate 172° + saturate 1.55 + brightness 0.82 +
+  // contrast 1.18) en appliquant les inverses sur un wrapper autour du
+  // Canvas. Indispensable car React Three Fiber ne propage pas les attributs
+  // DOM custom (genre `data-no-filter`) jusqu'à l'élément `<canvas>` réel —
+  // la règle CSS générique ne pouvait donc pas matcher. Avec ce wrapper +
+  // filter inline, le canvas affiche ses vraies couleurs source → la palette
+  // rouge Ultron reste rouge à l'écran (au lieu d'être teintée vert/cyan
+  // par le hue-rotate global).
+  const counterFilter = props.ultronMode
+    ? "hue-rotate(-172deg) saturate(0.645) brightness(1.22) contrast(0.847)"
+    : undefined;
+
   return (
-    <Canvas
-      camera={{ position: [0, 0, 5.2], fov: 38 }}
-      gl={{ antialias: true, alpha: true }}
-      style={{ background: "transparent" }}
-      dpr={[1, 2]}
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        filter: counterFilter,
+      }}
     >
-      <ambientLight intensity={0.18} color="#3b82f6" />
-      <ParticleOrb {...props} />
-    </Canvas>
+      <Canvas
+        camera={{ position: [0, 0, 5.2], fov: 38 }}
+        gl={{ antialias: true, alpha: true }}
+        style={{ background: "transparent", width: "100%", height: "100%" }}
+        dpr={[1, 2]}
+      >
+        <ambientLight intensity={0.18} color={ambientColor} />
+        <ParticleOrb {...props} />
+      </Canvas>
+    </div>
   );
 }

@@ -194,10 +194,13 @@ export function ParticleField() {
       for (const r of ripples) {
         const age = now - r.startTime;
         const progress = age / RIPPLE_DURATION;
-        const radius = progress * RIPPLE_MAX_RADIUS;
-        const alpha = (1 - progress) * 0.5;
+        // Garde-fou : radius doit être >= 0 sinon canvas.arc throw
+        // IndexSizeError. Peut arriver avec un startTime > now (clock skew).
+        const radius = Math.max(0, progress * RIPPLE_MAX_RADIUS);
+        if (radius === 0) continue;
+        const alpha = (1 - Math.max(0, Math.min(1, progress))) * 0.5;
         ctx.strokeStyle = `rgba(103, 232, 249, ${alpha})`;
-        ctx.lineWidth = 1.2 - progress * 0.6;
+        ctx.lineWidth = Math.max(0.1, 1.2 - progress * 0.6);
         ctx.beginPath();
         ctx.arc(r.x, r.y, radius, 0, Math.PI * 2);
         ctx.stroke();

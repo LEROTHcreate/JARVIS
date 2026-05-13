@@ -1,0 +1,26 @@
+{
+  "name": "JARVIS — Intelligence augmentée",
+  "short_name": "JARVIS",
+  "description": "Assistant IA ultra futuriste. Connaissances illimitées, calculs avancés, cartographie, voix et écrit.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#03060d",
+  "theme_color": "#00d4ff",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -7,6 +7,7 @@
    ============================================ */
 
 @import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
+@import url("https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css");
 
 :root {
   --jarvis-bg: #03060d;
@@ -25,6 +26,107 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* ============================================
+   MODE ULTRON — palette rouge sang menaçante
+   ============================================ */
+/* Le filter principal est plus dense (saturate élevé, brightness baissé,
+   contrast augmenté) pour passer d'un "JARVIS recoloré" à un véritable
+   blood-red Ultron. Les overlays ROGUE.PROTOCOL etc. sont rendus via
+   portal pour échapper à ce filter (cf. UltronOverlay.tsx). */
+.ultron-mode {
+  filter: hue-rotate(172deg) saturate(1.55) brightness(0.82) contrast(1.18);
+}
+.ultron-mode img,
+.ultron-mode video,
+.ultron-mode canvas[data-no-filter],
+.ultron-mode .leaflet-container,
+.ultron-mode .maplibregl-map {
+  filter: hue-rotate(-172deg) saturate(0.645) brightness(1.22) contrast(0.847);
+}
+.ultron-mode {
+  --jarvis-cyan: #ff1f2e;
+  --jarvis-cyan-soft: #ff6464;
+  --jarvis-ice: #ffb0b0;
+  --jarvis-blue: #6b0000;
+  --jarvis-electric: #b00010;
+}
+
+/* Vignette rouge qui respire (UltronOverlay) */
+@keyframes ultron-edge-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.95; }
+}
+/* Flickering du bandeau ROGUE.PROTOCOL — irrégulier façon écran corrompu */
+@keyframes ultron-text-flicker {
+  0%, 100% { opacity: 1; }
+  84% { opacity: 1; }
+  85% { opacity: 0.25; }
+  86% { opacity: 1; }
+  92% { opacity: 0.55; }
+  93% { opacity: 0.1; }
+  94% { opacity: 1; }
+}
+/* Tear glitch épisodique — décale les bandes horizontales */
+@keyframes ultron-tear {
+  0% { transform: translateX(-3px); opacity: 0.6; }
+  25% { transform: translateX(4px); opacity: 0.9; }
+  50% { transform: translateX(-2px); opacity: 0.4; }
+  75% { transform: translateX(3px); opacity: 0.7; }
+  100% { transform: translateX(0); opacity: 0; }
+}
+/* Halo pulsant autour du skull (mode Ultron) */
+@keyframes ultron-skull-halo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 30, 30, 0.55), 0 0 14px 2px rgba(255, 30, 30, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 30, 30, 0), 0 0 22px 4px rgba(255, 80, 0, 0.5); }
+}
+
+/* Position du panneau de conversation sur lg+. Calque CSS dédié (et non
+   classes Tailwind arbitraires) pour être insensible aux glitches de
+   hot-reload du JIT Tailwind sur les classes `[calc(...)]`. */
+@media (min-width: 1024px) {
+  .chat-panel-position {
+    /* Conversation dans la colonne droite — texte aligné à gauche
+       DU PANNEAU mais le panneau démarre à droite de l'orbe. */
+    left: 60%;
+    right: 3rem; /* 48px → laisse une marge confortable, centre le panneau */
+    top: 5rem; /* 80px */
+    bottom: 6rem; /* 96px = au-dessus de la barre de boutons centrée */
+    width: auto;
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Panneau de sources : symétrique parfait du chat (`chat-panel-position`).
+   Sur lg+, occupe la colonne gauche, en miroir : left=3rem, right=60%, mêmes
+   bornes verticales. Sur md (tablet), conserve une position compacte top-left
+   en absolu. En mobile (md-), le panneau est caché via `hidden md:flex`. */
+.sources-panel-position {
+  position: absolute;
+  left: 0.75rem;
+  top: 5rem;
+  width: 300px;
+  max-height: 70vh;
+  z-index: 20;
+}
+@media (min-width: 1024px) {
+  .sources-panel-position {
+    position: fixed;
+    /* left: 8rem (128px) → clear de la colonne HUD gauche
+       (skull + label J.A.R.V.I.S + SYS://0x…) qui occupe ~130px du bord. */
+    left: 8rem;
+    right: 60%;
+    top: 5rem;
+    bottom: 6rem;
+    width: auto;
+    max-width: none;
+    max-height: none;
+  }
 }
 
 html,
@@ -272,10 +374,12 @@ textarea,
 .leaflet-container {
   background: #03060d !important;
 }
-.leaflet-tile {
-  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.95)
-    saturate(1.1);
-}
+/* NOTE: les tiles cartocdn `dark_all` utilisées dans MapPanel sont DÉJÀ
+   sombres — pas besoin d'invert. Si on revient un jour à des tiles OSM
+   claires, ré-activer le filtre ci-dessous :
+   .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.85)
+   contrast(0.95) saturate(1.1); }
+*/
 .leaflet-control-attribution {
   background: rgba(3, 6, 13, 0.7) !important;
   color: #7a90b8 !important;
@@ -283,6 +387,20 @@ textarea,
 }
 .leaflet-control-attribution a {
   color: #00d4ff !important;
+}
+
+/* <mark> : citation directe d'une source (wikipedia_summary, news_headlines,
+   web_search). Souligné cyan + glow doux. Source = #00d4ff cyan en dur ;
+   en mode Ultron le hue-rotate(172deg) global le bascule automatiquement
+   en rouge sang sans avoir besoin d'une règle dédiée. */
+mark {
+  background: transparent;
+  color: #00d4ff;
+  text-decoration: underline #00d4ff;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-shadow: 0 0 6px rgba(0, 212, 255, 0.35);
+  padding: 0 1px;
 }
 
 /* Animation typewriter du caret */
@@ -297,3 +415,133 @@ textarea,
     opacity: 0;
   }
 }
+
+@layer base {
+  .theme {
+    --font-heading: var(--font-sans);
+    --font-sans: var(--font-sans);
+  }
+  /* shadcn/ui CSS vars remappées sur la palette JARVIS — cyan / noir
+     spatial. App always-dark, donc :root et .dark sont identiques.
+     L'aspect "glass" se fait via la classe `glass-panel` côté composant. */
+  :root {
+    --background: #03060d;            /* jarvis-bg */
+    --foreground: #e6f1ff;            /* jarvis-text */
+    --card: #070d1a;                  /* jarvis-surface */
+    --card-foreground: #e6f1ff;
+    --popover: #0a1428;               /* jarvis-panel */
+    --popover-foreground: #e6f1ff;
+    --primary: #00d4ff;               /* jarvis-cyan */
+    --primary-foreground: #03060d;
+    --secondary: #0a1428;
+    --secondary-foreground: #e6f1ff;
+    --muted: #16243f;                 /* jarvis-border */
+    --muted-foreground: #7a90b8;      /* jarvis-muted */
+    --accent: #00d4ff;
+    --accent-foreground: #03060d;
+    --destructive: #ff3b6c;
+    --border: rgba(0, 212, 255, 0.18);
+    --input: rgba(0, 212, 255, 0.18);
+    --ring: #00d4ff;
+    --chart-1: #00d4ff;
+    --chart-2: #67e8f9;
+    --chart-3: #0a84ff;
+    --chart-4: #3b82f6;
+    --chart-5: #dbeafe;
+    --radius: 0.75rem;
+    --sidebar: #070d1a;
+    --sidebar-foreground: #e6f1ff;
+    --sidebar-primary: #00d4ff;
+    --sidebar-primary-foreground: #03060d;
+    --sidebar-accent: #0a1428;
+    --sidebar-accent-foreground: #e6f1ff;
+    --sidebar-border: rgba(0, 212, 255, 0.18);
+    --sidebar-ring: #00d4ff;
+  }
+  /* Mode dark identique au :root — JARVIS est always-dark. */
+  .dark {
+    --background: #03060d;
+    --foreground: #e6f1ff;
+    --card: #070d1a;
+    --card-foreground: #e6f1ff;
+    --popover: #0a1428;
+    --popover-foreground: #e6f1ff;
+    --primary: #00d4ff;
+    --primary-foreground: #03060d;
+    --secondary: #0a1428;
+    --secondary-foreground: #e6f1ff;
+    --muted: #16243f;
+    --muted-foreground: #7a90b8;
+    --accent: #00d4ff;
+    --accent-foreground: #03060d;
+    --destructive: #ff3b6c;
+    --border: rgba(0, 212, 255, 0.18);
+    --input: rgba(0, 212, 255, 0.18);
+    --ring: #00d4ff;
+    --chart-1: #00d4ff;
+    --chart-2: #67e8f9;
+    --chart-3: #0a84ff;
+    --chart-4: #3b82f6;
+    --chart-5: #dbeafe;
+    --sidebar: #070d1a;
+    --sidebar-foreground: #e6f1ff;
+    --sidebar-primary: #00d4ff;
+    --sidebar-primary-foreground: #03060d;
+    --sidebar-accent: #0a1428;
+    --sidebar-accent-foreground: #e6f1ff;
+    --sidebar-border: rgba(0, 212, 255, 0.18);
+    --sidebar-ring: #00d4ff;
+  }
+  /* Note : les `@apply border-border / bg-background / font-sans` injectés
+     par shadcn v4 ne fonctionnent pas en Tailwind v3 (les classes color
+     tokens n'existent pas par défaut). Le body est déjà stylé dans la règle
+     html, body en haut du fichier. Les CSS vars restent dispo via var().
+  */
+}
+
+/* ============================================
+   highlight.js — thème JARVIS custom (cyan / dark)
+   ============================================ */
+pre.hljs {
+  background: rgba(7, 13, 26, 0.7);
+  border: 1px solid rgba(0, 212, 255, 0.18);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #e6f1ff;
+}
+pre.hljs code.hljs {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+.hljs-comment,
+.hljs-quote { color: #6b7d99; font-style: italic; }
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-name,
+.hljs-tag { color: #67e8f9; }
+.hljs-string,
+.hljs-title,
+.hljs-section,
+.hljs-attribute,
+.hljs-literal,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-addition { color: #a5f3fc; }
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-meta,
+.hljs-link { color: #fde68a; }
+.hljs-deletion,
+.hljs-variable { color: #f0abfc; }
+.hljs-function .hljs-title { color: #93c5fd; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: bold; }

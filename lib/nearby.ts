@@ -94,6 +94,39 @@ function haversine(
   return 2 * R * Math.asin(Math.sqrt(x));
 }
 
+// Mirrors Overpass. L'API principale est régulièrement surchargée /
+// rate-limitée ; on tente plusieurs miroirs avant d'abandonner.
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://lz4.overpass-api.de/api/interpreter",
+];
+
+async function postOverpass(
+  endpoint: string,
+  body: string,
+  timeoutMs = 15000,
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        // Overpass exige un User-Agent identifiable, sinon renvoie 406.
+        "User-Agent": "JARVIS/1.0 (https://github.com/anthropics)",
+      },
+      body: "data=" + encodeURIComponent(body),
+      signal: ctrl.signal,
+      // Cache 5 min pour éviter de retaper Overpass sur les mêmes requêtes.
+      next: { revalidate: 300 },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function searchNearby(
   query: string,
   lat: number,
@@ -103,15 +136,23 @@ export async function searchNearby(
 ): Promise<NearbyPin[]> {
   const overpassQuery = buildOverpassQuery(query, lat, lng, radius);
 
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: "data=" + encodeURIComponent(overpassQuery),
-    next: { revalidate: 300 },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Overpass ${res.status}`);
+  let res: Response | null = null;
+  let lastErr: unknown = null;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      res = await postOverpass(endpoint, overpassQuery);
+      if (res.ok) break;
+      lastErr = new Error(`${endpoint} → HTTP ${res.status}`);
+      res = null;
+    } catch (e) {
+      lastErr = e;
+      res = null;
+    }
+  }
+  if (!res) {
+    throw new Error(
+      `Overpass indisponible : ${lastErr instanceof Error ? lastErr.message : "tous les miroirs ont échoué"}`,
+    );
   }
 
   const data = (await res.json()) as {

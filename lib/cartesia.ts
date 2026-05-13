@@ -19,25 +19,39 @@ function getVoiceId() {
 }
 
 /**
+ * Identifiants d'un compte Cartesia. Si non fournis, on retombe sur les
+ * variables d'env du compte principal (CARTESIA_API_KEY / CARTESIA_VOICE_ID).
+ */
+export type CartesiaCredentials = {
+  apiKey?: string;
+  voiceId?: string;
+};
+
+/**
  * Synthétise du texte via Cartesia Sonic-3.5 multilingual.
  * Retourne le body audio (MP3 brut) sous forme de ReadableStream — on le pipe
  * directement au client pour minimiser la latence.
+ *
+ * `creds` permet d'utiliser un compte Cartesia secondaire (cascade quota).
  */
 export async function synthesizeCartesia(
   text: string,
-  opts: { language?: string } = {},
+  opts: { language?: string; creds?: CartesiaCredentials } = {},
 ): Promise<ReadableStream<Uint8Array>> {
+  const apiKey = opts.creds?.apiKey ?? getKey();
+  const voiceId = opts.creds?.voiceId ?? getVoiceId();
+
   const res = await fetch("https://api.cartesia.ai/tts/bytes", {
     method: "POST",
     headers: {
-      "X-API-Key": getKey(),
+      "X-API-Key": apiKey,
       "Cartesia-Version": "2026-03-01",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
       model_id: "sonic-3.5",
       transcript: text,
-      voice: { mode: "id", id: getVoiceId() },
+      voice: { mode: "id", id: voiceId },
       language: opts.language ?? "fr",
       output_format: {
         container: "mp3",

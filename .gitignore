@@ -27,9 +27,20 @@ yarn-error.log*
 # env files
 .env
 .env.local
+.env.vercel
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Google Cloud Service Account keys (NE JAMAIS COMMIT)
+google-sa-key.json
+*-sa-key.json
+*service-account*.json
+
+# Bandes-son copyrightées (4+ MB) — héberger sur Vercel via /public est OK
+# en local, mais ne pas commit. Tu peux ré-uploader via Vercel ou utiliser
+# un asset libre de droits si déploiement public.
+public/audio/
 
 # typescript
 *.tsbuildinfo

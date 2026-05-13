@@ -34,7 +34,7 @@ export function ToolChip({ tool }: Props) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none"
+          className="absolute -top-12 sm:-top-14 left-1/2 -translate-x-1/2 z-30 pointer-events-none whitespace-nowrap"
         >
           <div className="glass-panel rounded-xl px-4 py-2 flex items-center gap-3 max-w-[92vw]">
             {/* Mini-spinner rotatif cyan */}

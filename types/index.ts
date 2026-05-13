@@ -8,7 +8,12 @@ export interface ChatMessage {
   image?: string;
 }
 
-export type JarvisState = "idle" | "listening" | "thinking" | "speaking";
+export type JarvisState =
+  | "idle"
+  | "listening"
+  | "thinking"
+  | "speaking"
+  | "music";
 
 export interface MapPin {
   name: string;

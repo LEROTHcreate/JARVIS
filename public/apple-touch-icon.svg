@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="80%">
+      <stop offset="0%" stop-color="#0a1428"/>
+      <stop offset="100%" stop-color="#03060d"/>
+    </radialGradient>
+    <radialGradient id="core" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#f0f9ff"/>
+      <stop offset="14%" stop-color="#67e8f9"/>
+      <stop offset="40%" stop-color="#00d4ff"/>
+      <stop offset="70%" stop-color="#0a84ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#03060d" stop-opacity="0.9"/>
+    </radialGradient>
+    <radialGradient id="aura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0f9ff" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#00d4ff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#67e8f9" stop-opacity="0.95"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fond plein opaque (iOS découpe les coins lui-même) -->
+  <rect width="180" height="180" fill="url(#bg)"/>
+
+  <!-- Halo extérieur -->
+  <circle cx="90" cy="90" r="80" fill="url(#aura)"/>
+
+  <!-- Anneau extérieur pointillés -->
+  <circle cx="90" cy="90" r="74" fill="none" stroke="url(#ring)" stroke-width="2.5" stroke-dasharray="3 6"/>
+
+  <!-- Anneau intermédiaire continu -->
+  <circle cx="90" cy="90" r="60" fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- Marqueurs cardinaux -->
+  <line x1="90" y1="10" x2="90" y2="20" stroke="#67e8f9" stroke-width="3" stroke-linecap="round"/>
+  <line x1="90" y1="160" x2="90" y2="170" stroke="#67e8f9" stroke-width="3" stroke-linecap="round"/>
+  <line x1="10" y1="90" x2="20" y2="90" stroke="#67e8f9" stroke-width="3" stroke-linecap="round"/>
+  <line x1="160" y1="90" x2="170" y2="90" stroke="#67e8f9" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Orbe central -->
+  <circle cx="90" cy="90" r="40" fill="url(#core)"/>
+
+  <!-- Spéculaire pour effet sphère -->
+  <ellipse cx="78" cy="74" rx="14" ry="8" fill="#f0f9ff" opacity="0.55"/>
+
+  <!-- Point central ultra brillant -->
+  <circle cx="90" cy="90" r="2.5" fill="#f0f9ff"/>
+</svg>

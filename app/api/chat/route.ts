@@ -5,8 +5,9 @@ import {
   ToolCall,
   executeTool,
   extractMapPins,
-  streamGroqChat,
+  streamLLMChat,
 } from "@/lib/claude";
+import { rateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,10 @@ const HOLD = SENTINEL.length - 1;
 const MAX_TOOL_ITER = 5;
 
 export async function POST(req: NextRequest) {
+  // 30 requêtes / minute / IP — protège le quota Groq
+  const limited = rateLimit(req, "chat", 30, 60_000);
+  if (limited) return limited;
+
   let parsed;
   try {
     parsed = BodySchema.parse(await req.json());
@@ -64,7 +69,7 @@ export async function POST(req: NextRequest) {
         });
 
         for (let iter = 0; iter < MAX_TOOL_ITER; iter++) {
-          const body = await streamGroqChat(conv, {
+          const body = await streamLLMChat(conv, {
             userLocation: parsed.userLocation,
           });
           const reader = body.getReader();

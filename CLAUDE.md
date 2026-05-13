@@ -40,6 +40,19 @@ JARVIS est un assistant IA conversationnel inspiré de l'univers Iron Man. L'exp
 - Intégration : `ChatInterface` instancie le hook avec `enabled: wakeWordEnabled && !recording`. Quand le hook détecte le wake word, il appelle `startRecording()` (Web Speech API) et `stopTTS()`. La suspension pendant `recording` évite le conflit micro avec le SpeechRecognition manuel.
 - UI : icône `Radio` dans la barre d'input desktop, point cyan pulsant quand `status === "listening"`. Désactivé sur mobile (battery drain).
 
+### Recherche de lieu cinématique (`/recherche-lieu`)
+
+- Page dédiée : zoom cinématique Terre vue de l'espace → Europe → France → ville → adresse, avec marqueur final.
+- Stack : **MapLibre GL JS v5** (open-source, fork de Mapbox GL) + **MapTiler** (tiles satellite + geocoding, tier gratuit 100k req/mois, **sans CB**). Clé : `NEXT_PUBLIC_MAPTILER_KEY`.
+- Composants : `components/earth-zoom-search/`
+  - `useMaplibre` — init map en projection `globe`, `setSky` pour atmosphère/étoiles, rotation idle automatique.
+  - `geocoding.ts` — wrappers MapTiler Geocoding API (`searchAddress`, `searchPOI`, `reverseGeocode`).
+  - `useFlyToSequence` — chaîne 4 `flyTo` (Europe → France → ville → adresse), `await moveend` entre chaque, pitch progressif 15° → 60°.
+  - `EarthZoomSearch.tsx` — composant principal, intègre l'Input/Button shadcn, géoloc utilisateur pour biais de proximité, marqueur cyan + popup au point final.
+- Détection POI vs adresse via `isPOICategory()` dans `types/map.ts` — dictionnaire FR de mots-clés (`boulangerie`, `opticien`, `audioprothésiste`, etc.).
+- UI shadcn/ui thémée cyan : `components/ui/{button,input,sonner}.tsx`. CSS vars remappées sur la palette JARVIS dans `app/globals.css`.
+- Toaster `sonner` mounté dans `app/layout.tsx`.
+
 ### TTS (voix JARVIS)
 
 - Provider : **Cartesia Sonic-2** multilingual (cf. `lib/cartesia.ts`). Clé `CARTESIA_API_KEY`, voix `CARTESIA_VOICE_ID`. Tier gratuit ~100k caractères/mois.
