@@ -37,10 +37,11 @@ google-sa-key.json
 *-sa-key.json
 *service-account*.json
 
-# Bandes-son copyrightées (4+ MB) — héberger sur Vercel via /public est OK
-# en local, mais ne pas commit. Tu peux ré-uploader via Vercel ou utiliser
-# un asset libre de droits si déploiement public.
-public/audio/
+# NOTE : public/audio/ contient la bande-son du boot (~4 MB MP3
+# copyrighté, usage perso). Pas idéal pour un repo public, mais Nicolas
+# en assume l'usage. Si tu rends ce repo public à un moment, retire le
+# fichier de l'historique git (BFG / git filter-repo) ET ajoute
+# `public/audio/` ici en exclusion.
 
 # typescript
 *.tsbuildinfo
