@@ -1,4 +1,4 @@
-import DOMPurify from "isomorphic-dompurify";
+import DOMPurify, { type Config } from "isomorphic-dompurify";
 import { marked } from "marked";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
@@ -58,7 +58,7 @@ marked.use({
 
 // Configuration DOMPurify : whitelist stricte. Aucun script, aucun style
 // inline, aucun handler (onclick…). On ne garde que le markdown rendu.
-const PURIFY_OPTIONS = {
+const PURIFY_OPTIONS: Config = {
   ALLOWED_TAGS: [
     "p",
     "br",

@@ -47,13 +47,12 @@ export const metadata: Metadata = {
   applicationName: "JARVIS",
   manifest: "/manifest.webmanifest",
   icons: {
-    // Favicon principal — onglets navigateur sur desktop & mobile
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    // L'apple-touch-icon est généré automatiquement par Next.js depuis
-    // app/apple-icon.tsx (PNG 180x180 dynamique). On ne le déclare pas
-    // ici pour éviter les doublons. iOS récents lisent aussi le SVG
-    // référencé dans manifest.webmanifest.
-    shortcut: ["/favicon.svg"],
+    // Logo réacteur PNG cyan — utilisé partout (onglet navigateur, raccourci
+    // accueil iOS/Android, écran de splash). On déclare explicitement le PNG
+    // unique au lieu de plusieurs tailles : le navigateur s'occupe du resize.
+    icon: [{ url: "/icon.png", type: "image/png" }],
+    shortcut: ["/icon.png"],
+    apple: [{ url: "/icon.png", sizes: "180x180", type: "image/png" }],
   },
   // Active le mode "Web App" sur iOS quand l'utilisateur l'ajoute à son
   // écran d'accueil — l'app s'ouvre en plein écran sans la barre Safari.
